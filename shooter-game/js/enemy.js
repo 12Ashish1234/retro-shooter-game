@@ -42,17 +42,52 @@ class Enemy {
 
         this.flashTime = 0; // White flash when hit
         this.auraAngle = 0; // For elite/boss aura
+
+        // FSM State
+        this.state = 'chase';
+        this.stateTimer = 0;
     }
 
     update(deltaTime, player) {
         if (!this.isActive) return;
 
-        // Move toward player
+        const dist = Utils.distance(this.x, this.y, player.x, player.y);
         const angle = Utils.angleBetween(this.x, this.y, player.x, player.y);
         const dt = deltaTime / 1000;
 
-        this.x += Math.cos(angle) * this.speed * dt;
-        this.y += Math.sin(angle) * this.speed * dt;
+        // State Transitions
+        if (this.state === 'retreat') {
+            this.stateTimer -= deltaTime;
+            if (this.stateTimer <= 0) {
+                this.state = 'chase';
+            }
+        } else {
+            // Check for retreat trigger
+            if (this.health < this.maxHealth * 0.3) {
+                this.state = 'retreat';
+                this.stateTimer = 1000 + Math.random() * 1000; // 1-2 seconds
+            } else {
+                // Check for attack trigger
+                if (dist < 40) {
+                    this.state = 'attack';
+                } else {
+                    this.state = 'chase';
+                }
+            }
+        }
+
+        // State Behaviors
+        switch (this.state) {
+            case 'chase':
+                this.handleChase(dt, angle);
+                break;
+            case 'attack':
+                this.handleAttack();
+                break;
+            case 'retreat':
+                this.handleRetreat(dt, angle);
+                break;
+        }
 
         // Hit flash decay
         if (this.flashTime > 0) {
@@ -63,6 +98,22 @@ class Enemy {
         if (this.isElite || this.isBoss) {
             this.auraAngle += deltaTime * 0.005;
         }
+    }
+
+    handleChase(dt, angle) {
+        this.x += Math.cos(angle) * this.speed * dt;
+        this.y += Math.sin(angle) * this.speed * dt;
+    }
+
+    handleAttack() {
+        // Stop moving to "attack"
+        // Actual damage is handled by Game.checkCollisions()
+    }
+
+    handleRetreat(dt, angle) {
+        // Move away from player
+        this.x -= Math.cos(angle) * this.speed * dt;
+        this.y -= Math.sin(angle) * this.speed * dt;
     }
 
     takeDamage(amount) {
