@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Shooter</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="menu-screen" class="screen active">
+            <h1>RETRO SHOOTER</h1>
+            <div class="menu-options">
+                <button id="start-btn" class="menu-btn">START GAME</button>
+                <button id="instructions-btn" class="menu-btn">INSTRUCTIONS</button>
+            </div>
+        </div>
+        <div id="instructions-screen" class="screen">
+            <h2>HOW TO PLAY</h2>
+            <div class="instructions">
+                <p><span class="key">ARROW KEYS</span> or <span class="key">WASD</span> to move</p>
+                <p><span class="key">MOUSE</span> to aim</p>
+                <p><span class="key">LEFT CLICK</span> to shoot</p>
+                <p><span class="key">ESC</span> to pause</p>
+                <p>Survive waves of enemies!</p>
+                <div class="enemy-legend">
+                    <div class="enemy-type"><span class="enemy-dot basic"></span> Basic - Balanced</div>
+                    <div class="enemy-type"><span class="enemy-dot fast"></span> Fast - Quick but weak</div>
+                    <div class="enemy-type"><span class="enemy-dot tank"></span> Tank - Slow but tough</div>
+                </div>
+            </div>
+            <button id="back-btn" class="menu-btn">BACK</button>
+        </div>
+
+        <div id="pause-screen" class="screen">
+            <h2>PAUSED</h2>
+            <div class="menu-options">
+                <button id="resume-btn" class="menu-btn">RESUME</button>
+                <button id="quit-btn" class="menu-btn">QUIT TO MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/particle.js"></script>
+    <script src="js/bullet.js"></script>
+    <script src="js/tilemap.js"></script>
+    <script src="js/enemy.js"></script>
+    <script src="js/level.js"></script>
+    <script src="js/powerup.js"></script>
+    <script src="js/weapon.js"></script>
+    <script src="js/combo.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

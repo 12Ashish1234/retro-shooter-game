@@ -1,0 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #0a0a0a;
+    font-family: 'Press Start 2P', cursive;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+#game-container {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    border: 4px solid #00ff00;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+}
+
+#gameCanvas {
+    display: block;
+    background-color: #111;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    text-align: center;
+}
+
+.screen.active {
+    display: flex;
+}
+
+h1 {
+    font-size: 36px;
+    color: #00ff00;
+    text-shadow: 4px 4px 0 #008800;
+    margin-bottom: 40px;
+    letter-spacing: 2px;
+}
+
+h2 {
+    font-size: 24px;
+    color: #00ff00;
+    text-shadow: 3px 3px 0 #008800;
+    margin-bottom: 30px;
+}
+
+.menu-options {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.menu-btn {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 14px;
+    padding: 15px 30px;
+    background-color: transparent;
+    border: 3px solid #00ff00;
+    color: #00ff00;
+    cursor: pointer;
+    transition: all 0.1s;
+    text-transform: uppercase;
+}
+
+.menu-btn:hover {
+    background-color: #00ff00;
+    color: #000;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+}
+
+.instructions {
+    margin-bottom: 30px;
+    line-height: 2;
+}
+
+.instructions p {
+    margin-bottom: 15px;
+    font-size: 12px;
+}
+
+.key {
+    color: #00ff00;
+    border: 2px solid #00ff00;
+    padding: 5px 10px;
+    margin: 0 5px;
+}
+
+.enemy-legend {
+    margin-top: 30px;
+    padding: 20px;
+    border: 2px solid #333;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.enemy-type {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0;
+    font-size: 10px;
+    gap: 10px;
+}
+
+.enemy-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #000;
+}
+
+.enemy-dot.basic { background: #ff4444; }
+.enemy-dot.fast { background: #ff00ff; }
+.enemy-dot.tank { background: #ff8800; }
