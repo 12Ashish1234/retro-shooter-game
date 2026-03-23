@@ -101,10 +101,8 @@ class Game {
         // Clear blood
         this.bgCtx.clearRect(0, 0, 800, 600);
 
-        // Resume audio context if suspended
-        if (Audio.ctx && Audio.ctx.state === 'suspended') {
-            Audio.ctx.resume();
-        }
+        // Resume audio context
+        Audio.resume();
 
         // Create tilemap for level 1
         this.tileMap = new TileMap(25, 19, 32); // 800/32 = 25, 600/32 = 18.75

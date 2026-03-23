@@ -4,17 +4,30 @@ const Audio = {
     masterVolume: 0.3,
 
     init: function() {
+        // We will initialize/resume the context on the first user gesture
+        this.ctx = null;
+    },
+
+    resume: async function() {
+        if (!this.enabled) return;
+        
         try {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            if (!this.ctx) {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (this.ctx.state === 'suspended') {
+                await this.ctx.resume();
+            }
+            console.log('Audio Context active');
         } catch (e) {
-            console.log('Audio not supported');
+            console.log('Audio initialization failed:', e);
             this.enabled = false;
         }
     },
 
     // Generate a synthesized gunshot sound
     playShoot: function() {
-        if (!this.enabled || !this.ctx) return;
+        if (!this.enabled || !this.ctx || this.ctx.state !== 'running') return;
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -31,7 +44,7 @@ const Audio = {
         const noise = this.ctx.createBufferSource();
         noise.buffer = buffer;
         const noiseGain = this.ctx.createGain();
-        noiseGain.gain.value = 0.3;
+        noiseGain.gain.setValueAtTime(this.masterVolume * 0.5, this.ctx.currentTime);
 
         // Oscillator for tone
         osc.type = 'sawtooth';
@@ -63,7 +76,7 @@ const Audio = {
 
     // Explosion sound
     playExplosion: function(size = 'medium') {
-        if (!this.enabled || !this.ctx) return;
+        if (!this.enabled || !this.ctx || this.ctx.state !== 'running') return;
 
         const duration = size === 'large' ? 0.4 : size === 'small' ? 0.2 : 0.3;
         const bufferSize = this.ctx.sampleRate * duration;
@@ -86,7 +99,8 @@ const Audio = {
         filter.frequency.value = size === 'large' ? 300 : size === 'small' ? 800 : 500;
 
         const gain = this.ctx.createGain();
-        gain.gain.value = this.masterVolume * 0.5;
+        gain.gain.setValueAtTime(this.masterVolume * 0.8, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
 
         noise.connect(filter);
         filter.connect(gain);
@@ -97,7 +111,7 @@ const Audio = {
 
     // Hit sound
     playHit: function() {
-        if (!this.enabled || !this.ctx) return;
+        if (!this.enabled || !this.ctx || this.ctx.state !== 'running') return;
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -118,7 +132,7 @@ const Audio = {
 
     // Damage sound (player hurt)
     playDamage: function() {
-        if (!this.enabled || !this.ctx) return;
+        if (!this.enabled || !this.ctx || this.ctx.state !== 'running') return;
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -127,7 +141,7 @@ const Audio = {
         osc.frequency.setValueAtTime(150, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.3);
 
-        gain.gain.setValueAtTime(this.masterVolume * 0.4, this.ctx.currentTime);
+        gain.gain.setValueAtTime(this.masterVolume * 0.6, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
 
         osc.connect(gain);
@@ -139,7 +153,7 @@ const Audio = {
 
     // Level up sound
     playLevelUp: function() {
-        if (!this.enabled || !this.ctx) return;
+        if (!this.enabled || !this.ctx || this.ctx.state !== 'running') return;
 
         const notes = [440, 554, 659, 880]; // A major chord
         notes.forEach((freq, i) => {
@@ -151,7 +165,7 @@ const Audio = {
 
             const startTime = this.ctx.currentTime + i * 0.1;
             gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(this.masterVolume * 0.3, startTime + 0.05);
+            gain.gain.linearRampToValueAtTime(this.masterVolume * 0.5, startTime + 0.05);
             gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
 
             osc.connect(gain);
@@ -164,7 +178,7 @@ const Audio = {
 
     // Background drone (very subtle)
     playBackground: function() {
-        if (!this.enabled || !this.ctx) return;
+        if (!this.enabled || !this.ctx || this.ctx.state !== 'running') return;
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
