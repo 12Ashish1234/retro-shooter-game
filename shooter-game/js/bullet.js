@@ -1,21 +1,32 @@
 class Bullet {
-    constructor(x, y, angle, speed = 600, damage = 12) {
+    constructor() {
+        this.x = 0;
+        this.y = 0;
+        this.radius = 3;
+        this.speed = 0;
+        this.damage = 0;
+        this.velocity = { x: 0, y: 0 };
+        this.isActive = false;
+        this.lifetime = 2000;
+        this.age = 0;
+        this.trail = [];
+    }
+
+    init(x, y, angle, speed = 600, damage = 12) {
         this.x = x;
         this.y = y;
-        this.radius = 3;
-        this.speed = speed; // pixels per second
+        this.speed = speed;
         this.damage = damage;
-        this.velocity = {
-            x: Math.cos(angle) * this.speed,
-            y: Math.sin(angle) * this.speed
-        };
+        this.velocity.x = Math.cos(angle) * this.speed;
+        this.velocity.y = Math.sin(angle) * this.speed;
         this.isActive = true;
-        this.lifetime = 2000; // ms
         this.age = 0;
-        this.trail = []; // For visual effect
+        this.trail = [];
     }
 
     update(deltaTime) {
+        if (!this.isActive) return;
+
         // Store trail positions
         this.trail.push({ x: this.x, y: this.y });
         if (this.trail.length > 5) {
@@ -40,6 +51,8 @@ class Bullet {
     }
 
     render(ctx) {
+        if (!this.isActive) return;
+
         // Draw trail
         ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
         this.trail.forEach((pos, index) => {
@@ -61,4 +74,29 @@ class Bullet {
         ctx.arc(this.x, this.y, this.radius * 2, 0, Math.PI * 2);
         ctx.fill();
     }
+}
+
+class BulletPool {
+    constructor(initialSize = 50) {
+        this.pool = [];
+        for (let i = 0; i < initialSize; i++) {
+            this.pool.push(new Bullet());
+        }
+    }
+
+    get() {
+        // Find an inactive bullet
+        let bullet = this.pool.find(b => !b.isActive);
+        
+        // If none found, expand the pool
+        if (!bullet) {
+            bullet = new Bullet();
+            this.pool.push(bullet);
+        }
+        
+        return bullet;
+    }
+
+    // Optional: Return to pool helper if we wanted more complex management, 
+    // but isActive flag is sufficient for simple pooling
 }

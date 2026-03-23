@@ -27,6 +27,7 @@ class Player {
         this.shootCooldown = 0;
         this.shootDelay = 120; // ms between shots
         this.bullets = [];
+        this.bulletPool = new BulletPool(50);
 
         // Reference to particle system and tilemap (set by game)
         this.particles = null;
@@ -172,8 +173,9 @@ class Player {
             this.shoot();
         }
 
-        // Update bullets
+        // Update bullets (both active ones and recycling)
         this.bullets.forEach(bullet => bullet.update(deltaTime));
+        // Keep the same array, just filtered for active bullets
         this.bullets = this.bullets.filter(bullet => bullet.isActive);
     }
 
@@ -188,21 +190,20 @@ class Player {
         const gunTipX = this.x + Math.cos(this.facingAngle) * (this.gunLength - recoilOffset);
         const gunTipY = this.y + Math.sin(this.facingAngle) * (this.gunLength - recoilOffset);
 
-        // Shooting logic based on weapon type
+        // Shooting logic based on weapon type using object pooling
         if (weapon.type === 'shotgun') {
             for (let i = 0; i < weapon.pellets; i++) {
                 const spreadAngle = this.facingAngle + (Math.random() - 0.5) * weapon.spread;
-                const bullet = new Bullet(gunTipX, gunTipY, spreadAngle);
-                bullet.speed = weapon.bulletSpeed * (0.9 + Math.random() * 0.2);
-                this.bullets.push(bullet);
+                const bullet = this.bulletPool.get();
+                bullet.init(gunTipX, gunTipY, spreadAngle, weapon.bulletSpeed * (0.9 + Math.random() * 0.2), weapon.damage);
+                if (!this.bullets.includes(bullet)) this.bullets.push(bullet);
             }
             weapon.ammo--;
             if (this.particles) this.particles.createCasing(this.x, this.y, this.facingAngle);
         } else if (weapon.type === 'laser') {
-            const bullet = new Bullet(gunTipX, gunTipY, this.facingAngle);
-            bullet.speed = weapon.bulletSpeed;
-            bullet.damage = weapon.damage;
-            this.bullets.push(bullet);
+            const bullet = this.bulletPool.get();
+            bullet.init(gunTipX, gunTipY, this.facingAngle, weapon.bulletSpeed, weapon.damage);
+            if (!this.bullets.includes(bullet)) this.bullets.push(bullet);
             weapon.ammo--;
         } else {
             // Pistol or multi-shot powerup
@@ -210,14 +211,14 @@ class Player {
                 const spread = 0.2;
                 for (let i = -1; i <= 1; i++) {
                     const angle = this.facingAngle + (i * spread);
-                    const bullet = new Bullet(gunTipX, gunTipY, angle);
-                    bullet.speed = weapon.bulletSpeed;
-                    this.bullets.push(bullet);
+                    const bullet = this.bulletPool.get();
+                    bullet.init(gunTipX, gunTipY, angle, weapon.bulletSpeed, weapon.damage);
+                    if (!this.bullets.includes(bullet)) this.bullets.push(bullet);
                 }
             } else {
-                const bullet = new Bullet(gunTipX, gunTipY, this.facingAngle);
-                bullet.speed = weapon.bulletSpeed;
-                this.bullets.push(bullet);
+                const bullet = this.bulletPool.get();
+                bullet.init(gunTipX, gunTipY, this.facingAngle, weapon.bulletSpeed, weapon.damage);
+                if (!this.bullets.includes(bullet)) this.bullets.push(bullet);
             }
             if (this.particles) this.particles.createCasing(this.x, this.y, this.facingAngle);
         }
