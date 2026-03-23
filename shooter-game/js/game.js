@@ -337,7 +337,7 @@ class Game {
 
         // Render tilemap
         if (this.tileMap && this.player) {
-            this.tileMap.render(this.ctx, 0, 0, this.player.x, this.player.y);
+            this.tileMap.render(this.ctx, 0, 0);
         }
 
         if (this.state === 'PLAYING' || this.state === 'GAMEOVER' || this.state === 'VICTORY' || this.state === 'PAUSED') {

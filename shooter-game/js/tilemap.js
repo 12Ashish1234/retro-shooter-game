@@ -38,73 +38,85 @@ class TileMap {
     }
 
     generateFacilityMap(level) {
-        // Industrial theme with rooms and corridors
-        // Start with walls
+        // Industrial theme with much more open space
+        // Start with floor
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
-                this.tiles[y][x] = 1; // Wall
+                this.tiles[y][x] = 0; // Floor
             }
         }
 
-        // Create central room
-        this.createRoom(10, 8, 10, 8);
+        // Add border walls
+        for (let x = 0; x < this.width; x++) {
+            this.tiles[0][x] = 1;
+            this.tiles[this.height - 1][x] = 1;
+        }
+        for (let y = 0; y < this.height; y++) {
+            this.tiles[y][0] = 1;
+            this.tiles[y][this.width - 1] = 1;
+        }
 
-        // Add side rooms
-        this.createRoom(3, 5, 5, 5);
-        this.createRoom(3, 15, 5, 5);
-        this.createRoom(22, 5, 5, 5);
-        this.createRoom(22, 15, 5, 5);
+        // Create 2-3 larger rooms instead of many small ones
+        this.createRoom(2, 2, 6, 6);
+        this.createRoom(17, 2, 6, 6);
+        this.createRoom(9, 11, 7, 6);
 
-        // Connect with corridors
-        this.createCorridor(8, 10, 3, 10); // Left
-        this.createCorridor(17, 10, 3, 10); // Right
-        this.createCorridor(13, 8, 13, 4); // Top
-        this.createCorridor(13, 15, 13, 4); // Bottom
+        // Add "tactical pillars" instead of solid wall blocks
+        for (let i = 0; i < 8; i++) {
+            const px = Utils.randomInt(4, this.width - 5);
+            const py = Utils.randomInt(4, this.height - 5);
+            // Skip center area
+            if (px > 10 && px < 15 && py > 7 && py < 12) continue;
+            
+            this.tiles[py][px] = 1;
+            // Small 2x1 or 1x2 pillars occasionally
+            if (Math.random() > 0.5) {
+                if (Math.random() > 0.5) this.tiles[py][px+1] = 1;
+                else this.tiles[py+1][px] = 1;
+            }
+        }
 
         // Add some random details
-        for (let i = 0; i < 5 + level; i++) {
+        for (let i = 0; i < 10 + level; i++) {
             const x = Utils.randomInt(2, this.width - 3);
             const y = Utils.randomInt(2, this.height - 3);
             if (this.tiles[y][x] === 0) {
-                // Add decorative floor variations
-                this.tiles[y][x] = Utils.randomInt(0, 3); // 0-2 are floor variants
+                this.tiles[y][x] = Utils.randomInt(0, 3) === 2 ? 2 : 0; 
             }
         }
     }
 
     generateCaveMap(level) {
-        // Organic cavern style using cellular automata
-        // Start random
+        // Organic cavern style - made more spacious
+        // Start random with LOWER wall probability (38% instead of 45%)
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
-                // Border always wall
                 if (x === 0 || x === this.width - 1 || y === 0 || y === this.height - 1) {
                     this.tiles[y][x] = 1;
                 } else {
-                    this.tiles[y][x] = Math.random() < 0.45 ? 1 : 0;
+                    this.tiles[y][x] = Math.random() < 0.38 ? 1 : 0;
                 }
             }
         }
 
-        // Smooth with cellular automata
-        for (let i = 0; i < 5; i++) {
+        // Smooth with fewer passes for less "clumping"
+        for (let i = 0; i < 3; i++) {
             this.smoothCave();
         }
 
-        // Ensure center is clear (player spawn)
-        this.clearArea(12, 9, 6, 6);
+        // Ensure center is very clear
+        this.clearArea(10, 7, 6, 6);
 
-        // Add some water pools
-        for (let i = 0; i < 3 + Math.floor(level / 3); i++) {
-            const cx = Utils.randomInt(5, this.width - 6);
-            const cy = Utils.randomInt(5, this.height - 6);
-            this.createWaterPool(cx, cy, 3, 3);
+        // Add water pools - larger but fewer
+        for (let i = 0; i < 2; i++) {
+            const cx = Utils.randomInt(5, this.width - 10);
+            const cy = Utils.randomInt(5, this.height - 10);
+            this.createWaterPool(cx, cy, 4, 4);
         }
     }
 
     generateArenaMap(level) {
-        // Open arena with cover spots
-        // Mostly floor
+        // Very open arena with strategic cover
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
                 this.tiles[y][x] = 0;
@@ -121,27 +133,30 @@ class TileMap {
             this.tiles[y][this.width - 1] = 1;
         }
 
-        // Add cover barriers
-        const numBarriers = 6 + level;
-        for (let i = 0; i < numBarriers; i++) {
-            const bx = Utils.randomInt(5, this.width - 8);
-            const by = Utils.randomInt(5, this.height - 8);
-            const bw = Utils.randomInt(2, 4);
-            const bh = Utils.randomInt(2, 4);
+        // Add 4 corner fortresses
+        const corners = [
+            {x: 3, y: 3}, {x: 18, y: 3},
+            {x: 3, y: 13}, {x: 18, y: 13}
+        ];
 
-            for (let y = by; y < by + bh; y++) {
-                for (let x = bx; x < bx + bw; x++) {
-                    if (y > 10 && y < 20 && x > 10 && x < 20) continue; // Keep center clear
-                    this.tiles[y][x] = 1;
-                }
+        corners.forEach(c => {
+            // Small L-shaped cover
+            this.tiles[c.y][c.x] = 1;
+            this.tiles[c.y+1][c.x] = 1;
+            this.tiles[c.y][c.x+1] = 1;
+        });
+
+        // Add some central small pillars
+        this.tiles[9][12] = 1;
+        this.tiles[10][12] = 1;
+
+        // Add lava hazards - keep them away from main movement paths
+        for (let i = 0; i < 3; i++) {
+            const lx = Utils.randomInt(5, this.width - 8);
+            const ly = Utils.randomInt(5, this.height - 8);
+            if (Utils.distance(lx, ly, 12, 9) > 5) { // Keep center clear
+                this.createLavaPool(lx, ly, 2, 2);
             }
-        }
-
-        // Add lava hazards (damage tiles)
-        for (let i = 0; i < 4 + Math.floor(level / 2); i++) {
-            const lx = Utils.randomInt(3, this.width - 6);
-            const ly = Utils.randomInt(3, this.height - 6);
-            this.createLavaPool(lx, ly, 2, 2);
         }
     }
 
@@ -301,14 +316,12 @@ class TileMap {
         return positions;
     }
 
-    render(ctx, cameraX, cameraY, playerX, playerY) {
+    render(ctx, cameraX, cameraY) {
         // Calculate visible tile range
         const startX = Math.floor(cameraX / this.tileSize) - 1;
         const startY = Math.floor(cameraY / this.tileSize) - 1;
         const endX = startX + Math.ceil(800 / this.tileSize) + 2;
         const endY = startY + Math.ceil(600 / this.tileSize) + 2;
-
-        const visionRadius = 250;
 
         for (let y = startY; y < endY; y++) {
             for (let x = startX; x < endX; x++) {
@@ -318,31 +331,10 @@ class TileMap {
                 const tileY = y * this.tileSize;
                 const tile = this.tiles[y][x];
 
-                // Check if in vision
-                const dist = Utils.distance(tileX + this.tileSize/2, tileY + this.tileSize/2, playerX, playerY);
-                const isVisited = this.visited[y][x];
-                
-                if (dist < visionRadius) {
-                    // Fully visible
-                    this.renderTile(ctx, tile, tileX, tileY, 1.0);
-                } else if (isVisited) {
-                    // Visited but out of range (darker)
-                    this.renderTile(ctx, tile, tileX, tileY, 0.3);
-                } else {
-                    // Completely hidden
-                    ctx.fillStyle = '#000';
-                    ctx.fillRect(tileX, tileY, this.tileSize, this.tileSize);
-                }
+                // Render all tiles normally
+                this.renderTile(ctx, tile, tileX, tileY, 1.0);
             }
         }
-        
-        // Add a smooth vision gradient overlay
-        const grad = ctx.createRadialGradient(playerX, playerY, visionRadius * 0.5, playerX, playerY, visionRadius);
-        grad.addColorStop(0, 'rgba(0,0,0,0)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.8)');
-        
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 800, 600);
     }
 
     renderTile(ctx, tile, x, y, alpha = 1.0) {
