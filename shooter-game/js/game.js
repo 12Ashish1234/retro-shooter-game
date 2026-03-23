@@ -205,6 +205,9 @@ class Game {
         // Update enemies
         this.enemies.forEach(enemy => {
             if (enemy.isActive && this.player) {
+                // Ensure enemy has tilemap reference
+                if (!enemy.tileMap) enemy.tileMap = this.tileMap;
+                
                 enemy.update(deltaTime, this.player);
                 // Mark minimap for enemies
                 if (this.tileMap) {
@@ -310,10 +313,10 @@ class Game {
                     this.particles.createBloodSplatter(this.player.x, this.player.y, 3);
                 }
 
-                // Push enemy back
+                // Push enemy back SAFELY using moveWithCollision
                 const angle = Utils.angleBetween(enemy.x, enemy.y, this.player.x, this.player.y);
-                enemy.x -= Math.cos(angle) * (enemy.isBoss ? 10 : 30);
-                enemy.y -= Math.sin(angle) * (enemy.isBoss ? 10 : 30);
+                const pushDist = enemy.isBoss ? 10 : 30;
+                enemy.moveWithCollision(-Math.cos(angle) * pushDist, -Math.sin(angle) * pushDist);
 
                 // Check game over
                 if (this.player.health <= 0) {

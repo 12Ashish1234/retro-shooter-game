@@ -7,13 +7,14 @@ class LevelManager {
         // Wave spawning
         this.waveInProgress = false;
         this.waveNumber = 0;
-        this.enemiesToSpawn = 0;
+        this.enemiesToSpawn = { basic: 0, fast: 0, tank: 0, elite: 0 };
         this.spawnTimer = 0;
-        this.spawnDelay = 2000; // ms between spawns
+        this.spawnDelay = 2000;
 
         // Level transition
         this.levelTransitionTimer = 0;
         this.showingLevelScreen = false;
+        this.transitionInProgress = false;
 
         // Difficulty scaling
         this.enemyHealthMultiplier = 1;
@@ -48,7 +49,8 @@ class LevelManager {
         this.currentLevel = level;
         this.waveNumber = 0;
         this.showingLevelScreen = true;
-        this.levelTransitionTimer = 3000; // Show for 3 seconds
+        this.levelTransitionTimer = 2000; // Reduced to 2s
+        this.transitionInProgress = false;
 
         // Play level up sound
         Audio.playLevelUp();
@@ -63,67 +65,68 @@ class LevelManager {
             this.game.tileMap.generateLevel(level);
         }
 
+        // Clear any stray enemies
+        this.game.enemies = [];
+
         // Start first wave after level screen
         setTimeout(() => {
             this.showingLevelScreen = false;
-            if (this.waveConfig[this.currentLevel].boss) {
+            const config = this.waveConfig[this.currentLevel];
+            if (config && config.boss) {
                 this.startBossWave();
             } else {
                 this.startWave(1);
             }
-        }, 3000);
+        }, 2000);
     }
 
     startWave(waveNum) {
         this.waveNumber = waveNum;
         this.waveInProgress = true;
+        this.transitionInProgress = false;
 
         const config = this.waveConfig[this.currentLevel] || this.waveConfig[1];
-
-        // Calculate enemies for this wave (distribute across multiple waves per level)
         const totalWaves = 3;
         const waveIndex = waveNum - 1;
 
+        // Helper to get count safely
+        const getCount = (val) => (typeof val === 'number' ? val : 0);
+
         this.enemiesToSpawn = {
-            basic: Math.floor(config.basic / totalWaves) + (waveIndex === 0 ? config.basic % totalWaves : 0),
-            fast: Math.floor(config.fast / totalWaves) + (waveIndex === 1 ? config.fast % totalWaves : 0),
-            tank: Math.floor(config.tank / totalWaves) + (waveIndex === 2 ? config.tank % totalWaves : 0),
-            elite: Math.floor((config.elite || 0) / totalWaves) + (waveIndex === 0 ? (config.elite || 0) % totalWaves : 0)
+            basic: Math.floor(getCount(config.basic) / totalWaves) + (waveIndex === 0 ? getCount(config.basic) % totalWaves : 0),
+            fast: Math.floor(getCount(config.fast) / totalWaves) + (waveIndex === 1 ? getCount(config.fast) % totalWaves : 0),
+            tank: Math.floor(getCount(config.tank) / totalWaves) + (waveIndex === 2 ? getCount(config.tank) % totalWaves : 0),
+            elite: Math.floor(getCount(config.elite) / totalWaves) + (waveIndex === 0 ? getCount(config.elite) % totalWaves : 0)
         };
 
         this.spawnTimer = 0;
-        this.spawnDelay = (1500 + Math.random() * 1000) * this.spawnRateMultiplier;
+        this.spawnDelay = (1000 + Math.random() * 1000) * this.spawnRateMultiplier;
     }
 
     startBossWave() {
         this.waveNumber = 1;
         this.waveInProgress = true;
+        this.transitionInProgress = false;
         this.enemiesToSpawn = { basic: 0, fast: 0, tank: 0, elite: 0 };
-        
-        // Spawn boss
+        this.game.enemies = []; // Clear for boss
         this.spawnBoss();
     }
 
     spawnBoss() {
-        // Boss positions are usually center or far from player
-        const pos = { x: 400, y: 150 }; // Top center for boss
+        const pos = { x: 400, y: 150 };
+        const enemy = new Enemy(pos.x, pos.y, 'tank');
+        enemy.isBoss = true;
+        enemy.radius = 40;
+        enemy.maxHealth = 500 * (1 + (this.currentLevel / 5) * 0.5);
+        enemy.health = enemy.maxHealth;
+        enemy.speed = 80;
+        enemy.scoreValue = 1000 * this.currentLevel;
+        enemy.color = '#ff0000';
         
-        // Create boss enemy (we'll implement Boss class in enemy.js or boss.js)
-        // For now, let's use a very strong Tank enemy with an elite tag
-        const boss = new Enemy(pos.x, pos.y, 'tank');
-        boss.isBoss = true;
-        boss.radius = 40;
-        boss.maxHealth = 500 * (1 + (this.currentLevel / 5) * 0.5);
-        boss.health = boss.maxHealth;
-        boss.speed = 80;
-        boss.scoreValue = 1000 * this.currentLevel;
-        boss.color = '#ff0000';
-        
-        this.game.enemies.push(boss);
+        this.game.enemies.push(enemy);
     }
 
     update(deltaTime) {
-        // Handle level transition screen
         if (this.showingLevelScreen) {
             this.levelTransitionTimer -= deltaTime;
             if (this.levelTransitionTimer <= 0) {
@@ -132,34 +135,34 @@ class LevelManager {
             return;
         }
 
-        if (!this.waveInProgress) return;
+        if (!this.waveInProgress || this.transitionInProgress) return;
 
-        // Spawn enemies
-        const totalRemaining = this.enemiesToSpawn.basic + this.enemiesToSpawn.fast + this.enemiesToSpawn.tank + (this.enemiesToSpawn.elite || 0);
+        const totalRemaining = (this.enemiesToSpawn.basic || 0) + 
+                             (this.enemiesToSpawn.fast || 0) + 
+                             (this.enemiesToSpawn.tank || 0) + 
+                             (this.enemiesToSpawn.elite || 0);
 
         if (totalRemaining > 0) {
             this.spawnTimer -= deltaTime;
-
             if (this.spawnTimer <= 0) {
                 this.spawnEnemy();
-                this.spawnTimer = (1000 + Math.random() * 1500) * this.spawnRateMultiplier;
+                this.spawnTimer = (800 + Math.random() * 1200) * this.spawnRateMultiplier;
             }
         } else if (this.game.enemies.length === 0) {
-            // Wave complete
+            // Wave or Level complete
+            this.transitionInProgress = true;
             const config = this.waveConfig[this.currentLevel];
-            if (!config.boss && this.waveNumber < 3) {
-                // Start next wave
+            
+            if (config && !config.boss && this.waveNumber < 3) {
                 setTimeout(() => {
                     this.startWave(this.waveNumber + 1);
-                }, 2000);
+                }, 1000); // Reduced delay
             } else {
-                // Level complete
                 if (this.currentLevel < this.maxLevel) {
                     setTimeout(() => {
                         this.startLevel(this.currentLevel + 1);
-                    }, 2000);
+                    }, 1000); // Reduced delay
                 } else {
-                    // Game complete - victory!
                     this.game.state = 'VICTORY';
                 }
             }
@@ -168,7 +171,6 @@ class LevelManager {
     }
 
     spawnEnemy() {
-        // Pick enemy type
         const types = [];
         if (this.enemiesToSpawn.basic > 0) types.push('basic');
         if (this.enemiesToSpawn.fast > 0) types.push('fast');
@@ -178,18 +180,22 @@ class LevelManager {
         if (types.length === 0) return;
 
         const type = types[Math.floor(Math.random() * types.length)];
-        this.enemiesToSpawn[type === 'elite' ? 'elite' : type]--;
+        this.enemiesToSpawn[type]--;
 
-        // Get spawn position from tilemap (away from player)
-        let pos = { x: 100, y: 100 };
+        // Fallback to center if no spot found (center is guaranteed clear in all maps)
+        let pos = { x: 400, y: 300 }; 
         if (this.game.tileMap && this.game.player) {
             const positions = this.game.tileMap.getSpawnPositions(this.game.player.x, this.game.player.y, 1);
             if (positions.length > 0) {
                 pos = positions[0];
+            } else {
+                // If player is at center, find a corner
+                if (Utils.distance(pos.x, pos.y, this.game.player.x, this.game.player.y) < 200) {
+                    pos = { x: 50, y: 50 };
+                }
             }
         }
 
-        // Create enemy with scaled stats
         const actualType = type === 'elite' ? (Math.random() > 0.5 ? 'fast' : 'tank') : type;
         const enemy = new Enemy(pos.x, pos.y, actualType);
         
@@ -208,7 +214,6 @@ class LevelManager {
     }
 
     render(ctx) {
-        // Draw level transition screen
         if (this.showingLevelScreen) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
             ctx.fillRect(0, 0, 800, 600);
@@ -219,45 +224,25 @@ class LevelManager {
             ctx.fillText(`LEVEL ${this.currentLevel}`, 400, 200);
 
             const config = this.waveConfig[this.currentLevel];
-            
-            if (config.boss) {
+            if (config && config.boss) {
                 ctx.fillStyle = '#ff0000';
                 ctx.font = '24px "Press Start 2P"';
                 ctx.fillText('BOSS LEVEL', 400, 300);
                 ctx.fillStyle = '#fff';
-                ctx.fillText(config.theme, 400, 350);
-            } else {
+                ctx.fillText(config.theme || 'Guardian', 400, 350);
+            } else if (config) {
                 ctx.fillStyle = '#fff';
                 ctx.font = '16px "Press Start 2P"';
-
-                // Show enemy types for this level
                 let y = 300;
-
-                if (config.basic > 0) {
-                    ctx.fillStyle = '#ff4444';
-                    ctx.fillText(`${config.basic}x Basic Enemies`, 400, y);
-                    y += 30;
-                }
-                if (config.fast > 0) {
-                    ctx.fillStyle = '#ff00ff';
-                    ctx.fillText(`${config.fast}x Fast Enemies`, 400, y);
-                    y += 30;
-                }
-                if (config.tank > 0) {
-                    ctx.fillStyle = '#ff8800';
-                    ctx.fillText(`${config.tank}x Tank Enemies`, 400, y);
-                    y += 30;
-                }
-                if (config.elite > 0) {
-                    ctx.fillStyle = '#ffff00';
-                    ctx.fillText(`${config.elite}x Elite Enemies`, 400, y);
-                }
+                if (config.basic > 0) { ctx.fillStyle = '#ff4444'; ctx.fillText(`${config.basic}x Basic`, 400, y); y += 30; }
+                if (config.fast > 0) { ctx.fillStyle = '#ff00ff'; ctx.fillText(`${config.fast}x Fast`, 400, y); y += 30; }
+                if (config.tank > 0) { ctx.fillStyle = '#ff8800'; ctx.fillText(`${config.tank}x Tank`, 400, y); y += 30; }
+                if (config.elite > 0) { ctx.fillStyle = '#ffff00'; ctx.fillText(`${config.elite}x Elite`, 400, y); }
             }
 
             ctx.fillStyle = '#888';
             ctx.font = '12px "Press Start 2P"';
             ctx.fillText('Get Ready!', 400, 500);
-
             ctx.textAlign = 'left';
         }
     }
@@ -266,16 +251,17 @@ class LevelManager {
         if (!this.waveInProgress || this.showingLevelScreen) return;
 
         const config = this.waveConfig[this.currentLevel];
-        if (config.boss) {
+        if (config && config.boss) {
             ctx.fillStyle = '#ff0000';
             ctx.font = '12px "Press Start 2P"';
             ctx.fillText('BOSS WAVE', 680, 65);
             return;
         }
 
-        // Show wave progress
-        const totalRemaining = this.enemiesToSpawn.basic + this.enemiesToSpawn.fast + this.enemiesToSpawn.tank + (this.enemiesToSpawn.elite || 0);
-
+        const totalRemaining = (this.enemiesToSpawn.basic || 0) + 
+                             (this.enemiesToSpawn.fast || 0) + 
+                             (this.enemiesToSpawn.tank || 0) + 
+                             (this.enemiesToSpawn.elite || 0);
         ctx.fillStyle = '#fff';
         ctx.font = '12px "Press Start 2P"';
         ctx.fillText(`WAVE ${this.waveNumber}/3`, 680, 65);

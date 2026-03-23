@@ -7,6 +7,7 @@ class Enemy {
         this.isActive = true;
         this.isElite = false;
         this.isBoss = false;
+        this.tileMap = null; // Set by game
 
         // Stats based on type
         switch (type) {
@@ -62,12 +63,10 @@ class Enemy {
                 this.state = 'chase';
             }
         } else {
-            // Check for retreat trigger
             if (this.health < this.maxHealth * 0.3) {
                 this.state = 'retreat';
-                this.stateTimer = 1000 + Math.random() * 1000; // 1-2 seconds
+                this.stateTimer = 1000 + Math.random() * 1000;
             } else {
-                // Check for attack trigger
                 if (dist < 40) {
                     this.state = 'attack';
                 } else {
@@ -89,6 +88,10 @@ class Enemy {
                 break;
         }
 
+        // Clamp to screen and check for out-of-bounds "rescue"
+        this.x = Utils.clamp(this.x, this.radius, 800 - this.radius);
+        this.y = Utils.clamp(this.y, this.radius, 600 - this.radius);
+
         // Hit flash decay
         if (this.flashTime > 0) {
             this.flashTime -= deltaTime;
@@ -100,32 +103,47 @@ class Enemy {
         }
     }
 
+    moveWithCollision(dx, dy) {
+        const nextX = this.x + dx;
+        const nextY = this.y + dy;
+
+        if (this.tileMap) {
+            // Check X
+            if (this.tileMap.isWalkable(nextX, this.y)) {
+                this.x = nextX;
+            }
+            // Check Y
+            if (this.tileMap.isWalkable(this.x, nextY)) {
+                this.y = nextY;
+            }
+        } else {
+            this.x = nextX;
+            this.y = nextY;
+        }
+    }
+
     handleChase(dt, angle) {
-        this.x += Math.cos(angle) * this.speed * dt;
-        this.y += Math.sin(angle) * this.speed * dt;
+        this.moveWithCollision(Math.cos(angle) * this.speed * dt, Math.sin(angle) * this.speed * dt);
     }
 
     handleAttack() {
-        // Stop moving to "attack"
-        // Actual damage is handled by Game.checkCollisions()
+        // Stop moving
     }
 
     handleRetreat(dt, angle) {
-        // Move away from player
-        this.x -= Math.cos(angle) * this.speed * dt;
-        this.y -= Math.sin(angle) * this.speed * dt;
+        this.moveWithCollision(-Math.cos(angle) * this.speed * dt, -Math.sin(angle) * this.speed * dt);
     }
 
     takeDamage(amount) {
         this.health -= amount;
-        this.flashTime = 100; // ms
+        this.flashTime = 100;
 
         if (this.health <= 0) {
             this.health = 0;
             this.isActive = false;
-            return true; // Died
+            return true;
         }
-        return false; // Still alive
+        return false;
     }
 
     render(ctx) {
@@ -154,14 +172,13 @@ class Enemy {
         ctx.ellipse(this.x, this.y + this.radius * 0.6, this.radius * 0.8, this.radius * 0.4, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Body - flash white when hit
+        // Body
         if (this.flashTime > 0) {
             ctx.fillStyle = '#ffffff';
         } else {
             ctx.fillStyle = this.isBoss ? '#660000' : this.color;
         }
 
-        // Draw enemy shape
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
@@ -171,15 +188,13 @@ class Enemy {
         ctx.lineWidth = this.isElite || this.isBoss ? 3 : 2;
         ctx.stroke();
 
-        // Inner detail based on type
+        // Details
         ctx.fillStyle = '#000';
         if (this.type === 'basic') {
-            // X eyes
             ctx.fillRect(this.x - 6, this.y - 6, 4, 4);
             ctx.fillRect(this.x + 2, this.y - 6, 4, 4);
             ctx.fillRect(this.x - 4, this.y + 2, 8, 2);
         } else if (this.type === 'fast') {
-            // Angry eyes
             ctx.beginPath();
             ctx.moveTo(this.x - 8, this.y - 4);
             ctx.lineTo(this.x - 2, this.y);
@@ -191,12 +206,11 @@ class Enemy {
             ctx.lineTo(this.x + 8, this.y + 2);
             ctx.stroke();
         } else if (this.type === 'tank' || this.isBoss) {
-            // Heavy brow
             ctx.fillRect(this.x - 10, this.y - 8, 20, 4);
             ctx.fillRect(this.x - 4, this.y, 8, 8);
         }
 
-        // Health bar for tank, elite, or boss
+        // Health bar
         if (this.type === 'tank' || this.isElite || this.isBoss) {
             const barWidth = this.radius * 2.5;
             const barHeight = this.isBoss ? 8 : 4;
@@ -216,7 +230,6 @@ class Enemy {
         }
     }
 
-    // For collision detection
     getBounds() {
         return {
             x: this.x - this.radius,
